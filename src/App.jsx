@@ -2,6 +2,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import gsap from "gsap";
 import { Observer } from "gsap/Observer";
 import { HeroSection } from "./sections/HeroSection";
+import { ManifestSection } from "./sections/ManifestSection";
+import { TracksSection } from "./sections/TracksSection";
+import { TimelineSection } from "./sections/TimelineSection";
+import { ApplySection } from "./sections/ApplySection";
 import { StoryChapterOverlay } from "./components/StoryChapterOverlay";
 import { usePrefersReducedMotion } from "./hooks/usePrefersReducedMotion";
 import { IntroOverlay } from "./components/IntroOverlay";
@@ -9,7 +13,21 @@ import { IntroOverlay } from "./components/IntroOverlay";
 gsap.registerPlugin(Observer);
 
 const DESKTOP_BREAKPOINT = 768;
-const CHAPTERS = ["hero", "manifest", "tracks", "schedule", "apply"];
+const SNAP_DELAY_MS = 180;
+const CHAPTERS = [
+  { key: "hero", id: "top", label: "hero" },
+  { key: "manifest", id: "manifest", label: "manifest" },
+  { key: "tracks", id: "tracks", label: "tracks" },
+  { key: "schedule", id: "schedule", label: "schedule" },
+  { key: "apply", id: "apply", label: "apply" }
+];
+
+function isEditableTarget(target) {
+  if (!(target instanceof HTMLElement)) return false;
+  if (target.isContentEditable) return true;
+
+  return target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.tagName === "SELECT";
+}
 
 export default function App() {
   const reducedMotion = usePrefersReducedMotion();
@@ -17,6 +35,7 @@ export default function App() {
   const stageRef = useRef(null);
   const observerRef = useRef(null);
   const frameRef = useRef(0);
+  const snapTimeoutRef = useRef(0);
   const progressRef = useRef(0);
   const targetProgressRef = useRef(0);
   const activeIndexRef = useRef(0);
@@ -105,11 +124,60 @@ export default function App() {
     startProgressLoop();
   }, [applyStageProgress, clampProgress, reducedMotion, startProgressLoop]);
 
+  const clearSnapTimeout = useCallback(() => {
+    if (!snapTimeoutRef.current) return;
+    window.clearTimeout(snapTimeoutRef.current);
+    snapTimeoutRef.current = 0;
+  }, []);
+
+  const snapToNearestChapter = useCallback(() => {
+    const nearest = clampProgress(Math.round(targetProgressRef.current));
+    targetProgressRef.current = nearest;
+
+    if (reducedMotion) {
+      applyStageProgress(nearest);
+      activeIndexRef.current = nearest;
+      setActiveIndex(nearest);
+      return;
+    }
+
+    startProgressLoop();
+  }, [applyStageProgress, clampProgress, reducedMotion, startProgressLoop]);
+
+  const scheduleSnapToNearestChapter = useCallback(() => {
+    clearSnapTimeout();
+    snapTimeoutRef.current = window.setTimeout(() => {
+      snapTimeoutRef.current = 0;
+      snapToNearestChapter();
+    }, SNAP_DELAY_MS);
+  }, [clearSnapTimeout, snapToNearestChapter]);
+
   const nudgeProgress = useCallback((delta) => {
     const scale = reducedMotion ? 0.0012 : 0.0019;
     targetProgressRef.current = clampProgress(targetProgressRef.current + delta * scale);
     startProgressLoop();
-  }, [clampProgress, reducedMotion, startProgressLoop]);
+    scheduleSnapToNearestChapter();
+  }, [clampProgress, reducedMotion, scheduleSnapToNearestChapter, startProgressLoop]);
+
+  const scrollToChapter = useCallback((index) => {
+    const chapter = CHAPTERS[index];
+    if (!chapter) return;
+
+    if (isDesktopStory) {
+      goToChapter(index);
+      return;
+    }
+
+    const target = document.getElementById(chapter.id);
+    if (!target) return;
+
+    target.scrollIntoView({
+      behavior: reducedMotion ? "auto" : "smooth",
+      block: "start"
+    });
+    activeIndexRef.current = index;
+    setActiveIndex(index);
+  }, [goToChapter, isDesktopStory, reducedMotion]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => setIntroDone(true), reducedMotion ? 60 : 1200);
@@ -130,6 +198,7 @@ export default function App() {
 
   useEffect(() => {
     if (!isDesktopStory) {
+      clearSnapTimeout();
       if (observerRef.current) {
         observerRef.current.kill();
         observerRef.current = null;
@@ -151,6 +220,10 @@ export default function App() {
     });
 
     const onKeyDown = (event) => {
+      if (isEditableTarget(event.target)) {
+        return;
+      }
+
       if (event.key === "ArrowRight" || event.key === "PageDown") {
         event.preventDefault();
         goToChapter(activeIndexRef.current + 1);
@@ -178,8 +251,46 @@ export default function App() {
       }
       window.removeEventListener("keydown", onKeyDown);
       document.body.style.overflow = "";
+      clearSnapTimeout();
     };
-  }, [goToChapter, isDesktopStory, nudgeProgress]);
+  }, [clearSnapTimeout, goToChapter, isDesktopStory, nudgeProgress]);
+
+  useEffect(() => {
+    if (isDesktopStory) return undefined;
+
+    const sectionMap = CHAPTERS.map((chapter, index) => ({
+      index,
+      element: document.getElementById(chapter.id)
+    })).filter((entry) => entry.element);
+
+    if (!sectionMap.length) return undefined;
+
+    const syncActiveSection = () => {
+      const threshold = 160;
+      let nextIndex = 0;
+
+      sectionMap.forEach((entry) => {
+        const top = entry.element.getBoundingClientRect().top;
+        if (top - threshold <= 0) {
+          nextIndex = entry.index;
+        }
+      });
+
+      if (nextIndex === activeIndexRef.current) return;
+
+      activeIndexRef.current = nextIndex;
+      setActiveIndex(nextIndex);
+    };
+
+    syncActiveSection();
+    window.addEventListener("scroll", syncActiveSection, { passive: true });
+    window.addEventListener("resize", syncActiveSection, { passive: true });
+
+    return () => {
+      window.removeEventListener("scroll", syncActiveSection);
+      window.removeEventListener("resize", syncActiveSection);
+    };
+  }, [isDesktopStory]);
 
   useEffect(() => {
     activeIndexRef.current = activeIndex;
@@ -195,32 +306,36 @@ export default function App() {
 
   useEffect(() => {
     return () => {
+      clearSnapTimeout();
       if (frameRef.current) {
         window.cancelAnimationFrame(frameRef.current);
       }
     };
-  }, []);
+  }, [clearSnapTimeout]);
 
   return (
     <div className={`site-root ${introDone ? "is-intro-done" : "is-intro-active"}`}>
       <IntroOverlay done={introDone} reducedMotion={reducedMotion} />
 
       <header className="site-header">
-        <button className="site-logo" type="button" onClick={() => goToChapter(0)}>
+        <button
+          className={`site-logo ${activeIndex === 0 ? "is-active" : ""}`}
+          type="button"
+          onClick={() => scrollToChapter(0)}
+        >
           WBU AI HACKATHON
         </button>
         <nav className="site-nav" aria-label="Primary">
-          {CHAPTERS.slice(1).map((key, index) => {
-            const chapterIndex = index + 1;
+          {CHAPTERS.map((chapter, chapterIndex) => {
             return (
               <button
-                key={key}
+                key={chapter.key}
                 type="button"
                 className={activeIndex === chapterIndex ? "is-active" : ""}
                 aria-current={activeIndex === chapterIndex ? "page" : undefined}
-                onClick={() => goToChapter(chapterIndex)}
+                onClick={() => scrollToChapter(chapterIndex)}
               >
-                {key}
+                {chapter.label}
               </button>
             );
           })}
@@ -235,17 +350,30 @@ export default function App() {
         <span className="story-progress__total">/ {String(CHAPTERS.length).padStart(2, "0")}</span>
       </div>
 
-      <main ref={stageRef} className="story-stage">
+      <main ref={stageRef} className={`story-stage ${isDesktopStory ? "" : "story-stage--stacked"}`}>
         <HeroSection
           pointer={pointer}
           reducedMotion={reducedMotion}
           introDone={introDone}
-          isActive={storyProgress < 0.72}
+          isActive={isDesktopStory ? storyProgress < 0.72 : true}
           showCanvas={isDesktopStory}
           progressRef={progressRef}
-          onGoToPanel={goToChapter}
+          onGoToPanel={scrollToChapter}
         />
-        <StoryChapterOverlay progress={storyProgress} isApplyFocused={storyProgress > 3.45} onGoToChapter={goToChapter} />
+        {isDesktopStory ? (
+          <StoryChapterOverlay
+            progress={storyProgress}
+            isApplyFocused={storyProgress > 3.45}
+            onGoToChapter={goToChapter}
+          />
+        ) : (
+          <>
+            <ManifestSection forceVisible />
+            <TracksSection forceVisible />
+            <TimelineSection forceVisible />
+            <ApplySection forceVisible onBackToTop={() => scrollToChapter(0)} />
+          </>
+        )}
       </main>
     </div>
   );

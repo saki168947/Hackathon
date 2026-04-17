@@ -54,19 +54,28 @@ export function ApplyForm() {
       <div className="apply-form__grid">
         <label className="apply-form__field">
           <span>姓名</span>
-          <input name="name" value={form.name} onChange={updateField} required />
+          <input name="name" autoComplete="name" value={form.name} onChange={updateField} required />
         </label>
         <label className="apply-form__field">
           <span>邮箱</span>
-          <input name="email" type="email" value={form.email} onChange={updateField} required />
+          <input
+            name="email"
+            type="email"
+            autoComplete="email"
+            inputMode="email"
+            spellCheck={false}
+            value={form.email}
+            onChange={updateField}
+            required
+          />
         </label>
         <label className="apply-form__field">
           <span>团队/项目名</span>
-          <input name="teamName" value={form.teamName} onChange={updateField} />
+          <input name="teamName" autoComplete="organization" value={form.teamName} onChange={updateField} />
         </label>
         <label className="apply-form__field">
           <span>角色</span>
-          <input name="role" value={form.role} onChange={updateField} />
+          <input name="role" autoComplete="organization-title" value={form.role} onChange={updateField} />
         </label>
       </div>
       <label className="apply-form__field apply-form__field--full">
@@ -77,7 +86,7 @@ export function ApplyForm() {
         <button className="button button--primary" type="submit" disabled={pending}>
           {pending ? "发送中…" : "提交报名"}
         </button>
-        <span className={`apply-form__message ${error ? "is-error" : "is-success"}`} role="status">
+        <span className={`apply-form__message ${error ? "is-error" : "is-success"}`} role="status" aria-live="polite">
           {message}
         </span>
       </div>

@@ -52,6 +52,10 @@ select {
   font: inherit;
 }
 
+textarea {
+  font: inherit;
+}
+
 button {
   color: inherit;
 }
@@ -165,10 +169,29 @@ button {
 }
 
 .site-logo {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  min-height: 44px;
   font-size: 12px;
   letter-spacing: 0.24em;
   text-transform: uppercase;
   color: var(--text);
+  cursor: pointer;
+  transition: color 180ms ease, opacity 180ms ease;
+}
+
+.site-logo:hover,
+.site-logo:focus-visible,
+.site-logo.is-active {
+  color: var(--accent);
+  opacity: 1;
+}
+
+.site-logo:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
 }
 
 .site-nav {
@@ -244,6 +267,7 @@ button {
   color: var(--soft);
   pointer-events: none;
   mix-blend-mode: screen;
+  font-variant-numeric: tabular-nums;
 }
 
 .story-progress__bar {
@@ -591,7 +615,7 @@ button {
   background:
     linear-gradient(180deg, rgba(255, 255, 255, calc(0.02 + var(--chapter-light) * 0.035)), rgba(255, 255, 255, 0.01)),
     linear-gradient(120deg, rgba(255, 255, 255, calc(var(--chapter-light) * 0.055)) 0%, rgba(255, 255, 255, 0) 28%),
-    rgba(6, 6, 7, 0.54);
+    rgba(6, 6, 7, 0.7);
   backdrop-filter: blur(22px);
   box-shadow:
     0 24px 80px rgba(0, 0, 0, 0.34),
@@ -660,7 +684,7 @@ button {
 .chapter-overlay__copy {
   max-width: 28rem;
   margin: 0;
-  color: var(--muted);
+  color: rgba(242, 241, 236, 0.8);
   line-height: 1.85;
   transform: translateZ(54px);
 }
@@ -711,7 +735,7 @@ button {
 .chapter-strip__body p,
 .chapter-track p {
   margin: 0;
-  color: var(--muted);
+  color: rgba(242, 241, 236, 0.76);
   line-height: 1.75;
 }
 
@@ -902,7 +926,10 @@ button {
   color: var(--text);
   padding: 14px 16px;
   resize: vertical;
-  transition: all 0.3s ease;
+  transition:
+    border-color 180ms ease,
+    background-color 180ms ease,
+    box-shadow 180ms ease;
 }
 
 .apply-form__field input::placeholder,
@@ -932,6 +959,7 @@ button {
 .apply-form__message {
   font-size: 13px;
   color: var(--muted);
+  min-height: 1.25rem;
 }
 
 .apply-form__message.is-error {
@@ -1324,6 +1352,10 @@ button {
     overflow: visible;
   }
 
+  .story-stage--stacked {
+    padding-bottom: 56px;
+  }
+
   .story-stage::before {
     display: none;
   }
@@ -1430,9 +1462,18 @@ button {
     gap: 14px;
   }
 
+  .site-nav button,
+  .site-logo {
+    min-height: 40px;
+  }
+
   .hero {
     min-height: auto;
     padding-top: 112px;
+  }
+
+  .hero__content {
+    min-height: auto;
   }
 
   .hero__hint {
@@ -1445,6 +1486,12 @@ button {
 
   .chapter-overlay__panel {
     padding: 20px;
+  }
+
+  .chapter-overlay__copy,
+  .section-title p,
+  .hero__lede {
+    max-width: none;
   }
 
   .section {
@@ -1462,8 +1509,24 @@ button {
   }
 
   .site-nav a,
+  .site-nav button,
+  .site-logo,
   .button,
-  .story-panel .section {
+  .story-panel .section,
+  .story-progress__bar i,
+  .hero__canvas,
+  .hero__content,
+  .hero__layer,
+  .chapter-overlay,
+  .chapter-overlay__panel,
+  .chapter-overlay__copy,
+  .chapter-stack,
+  .chapter-dual-lane,
+  .chapter-timeline,
+  .apply-form,
+  .apply-form-drawer,
+  .reveal-block,
+  .reveal-block.is-visible {
     transition: none;
     animation: none;
   }
@@ -1474,13 +1537,33 @@ button {
   }
 
   .reveal-block,
-  .reveal-block.is-visible {
-    transition: none;
+  .reveal-block.is-visible,
+  .hero__beam-origin,
+  .hero__layer,
+  .hero__content,
+  .chapter-overlay,
+  .chapter-overlay__panel,
+  .chapter-overlay__copy,
+  .chapter-stack,
+  .chapter-dual-lane,
+  .chapter-timeline,
+  .apply-form,
+  .apply-form-drawer,
+  .story-progress__bar i {
     transform: none;
     filter: none;
   }
 
-  .hero__beam-origin {
-    transform: none;
+  .hero__hint,
+  .intro-overlay__beam,
+  .intro-overlay__line,
+  .intro-overlay__label,
+  .chapter-overlay__panel-glow {
+    display: none;
+  }
+
+  .apply-form-drawer {
+    opacity: 1;
+    grid-template-rows: 1fr;
   }
 }
