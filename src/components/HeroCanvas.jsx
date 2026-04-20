@@ -73,46 +73,54 @@ function BeamSystem({ pointer, reducedMotion, progressRef, beamWorldRef, beamSta
     const t = state.clock.getElapsedTime();
     const progress = progressRef.current;
     const chapter = chapterSample(progress);
-    const pointerX = reducedMotion ? 0 : pointer.current.x * 0.22;
-    const pointerY = reducedMotion ? 0 : pointer.current.y * 0.14;
+    const px = pointer.current.x;
+    const py = pointer.current.y;
     const x = MathUtils.lerp(CHAPTER_X[0], CHAPTER_X[MAX_INDEX], progress / MAX_INDEX);
 
+    // Pointer now drives the beam tilt & offset — this IS the light-field response
+    const pointerTiltZ = chapter.beamTilt + px * 0.18;
+    const pointerTiltY = chapter.beamTilt * 0.5 + px * 0.12;
+    const pointerOffsetY = py * 0.35;
+
     rootRef.current.position.x = MathUtils.damp(rootRef.current.position.x, x, 3.8, delta);
-    rootRef.current.rotation.y = MathUtils.damp(rootRef.current.rotation.y, pointerX * 0.6, 4, delta);
-    rootRef.current.rotation.x = MathUtils.damp(rootRef.current.rotation.x, -pointerY * 0.44, 4, delta);
+    rootRef.current.position.y = MathUtils.damp(rootRef.current.position.y, 0.16 + pointerOffsetY, 4.2, delta);
+    rootRef.current.rotation.y = MathUtils.damp(rootRef.current.rotation.y, pointerTiltY, 4.1, delta);
+    rootRef.current.rotation.x = 0;
     rootRef.current.rotation.z = MathUtils.damp(
       rootRef.current.rotation.z,
-      chapter.beamTilt + pointerX * -0.12,
-      4.2,
+      pointerTiltZ,
+      4.1,
       delta
     );
 
     const pulse = reducedMotion ? 0 : Math.sin(t * 2.2) * 0.05;
-    const nextScale = chapter.beamScale + pulse;
+    // Pointer magnitude modulates beam scale slightly
+    const pointerMag = Math.sqrt(px * px + py * py);
+    const nextScale = chapter.beamScale + pulse + pointerMag * 0.12;
     coreRef.current.scale.y = MathUtils.damp(coreRef.current.scale.y, nextScale, 5, delta);
     auraRef.current.scale.y = MathUtils.damp(auraRef.current.scale.y, nextScale * 1.08, 5, delta);
     auraRef.current.material.opacity = MathUtils.damp(
       auraRef.current.material.opacity,
-      0.08 + chapter.energy * 0.08,
+      0.08 + chapter.energy * 0.08 + pointerMag * 0.06,
       4,
       delta
     );
 
     if (beamWorldRef) {
       coreRef.current.getWorldPosition(beamWorldRef.current);
-      beamWorldRef.current.x += Math.cos(rootRef.current.rotation.z) * 3.6;
-      beamWorldRef.current.y += Math.sin(rootRef.current.rotation.z) * 3.6 + 0.18;
+      beamWorldRef.current.x += Math.cos(rootRef.current.rotation.z) * 4.35;
+      beamWorldRef.current.y += Math.sin(rootRef.current.rotation.z) * 4.6 + 0.18;
     }
     if (beamStateRef) {
       beamStateRef.current.angle = rootRef.current.rotation.z;
-      beamStateRef.current.intensity = chapter.energy;
+      beamStateRef.current.intensity = chapter.energy + pointerMag * 0.15;
     }
   });
 
   return (
     <group ref={rootRef} position={[0, 0.16, 0]}>
       <mesh ref={auraRef} position={[0.25, 0.1, -0.12]} rotation={[0, 0, 0.08]}>
-        <planeGeometry args={[8.8, 1.86]} />
+        <planeGeometry args={[9.8, 2.2]} />
         <meshBasicMaterial
           color="#efe5d0"
           transparent
@@ -123,7 +131,7 @@ function BeamSystem({ pointer, reducedMotion, progressRef, beamWorldRef, beamSta
         />
       </mesh>
       <mesh ref={coreRef} position={[0.25, 0.08, 0]} rotation={[0, 0, 0.08]}>
-        <planeGeometry args={[8.1, 0.42]} />
+        <planeGeometry args={[9.1, 0.52]} />
         <meshBasicMaterial
           color="#f7f4eb"
           transparent
@@ -134,7 +142,7 @@ function BeamSystem({ pointer, reducedMotion, progressRef, beamWorldRef, beamSta
         />
       </mesh>
       <mesh position={[0.18, 0.08, -0.04]} rotation={[0, 0, 0.08]}>
-        <planeGeometry args={[8.4, 0.96]} />
+        <planeGeometry args={[9.4, 1.12]} />
         <meshBasicMaterial
           color="#d8c7a2"
           transparent
@@ -159,12 +167,12 @@ function ChapterStructures({ progressRef }) {
       const distance = Math.abs(progress - index);
       const emphasis = Math.max(0, 1 - distance * 0.8);
       child.scale.z = MathUtils.damp(child.scale.z, 0.8 + emphasis * 0.6, 4.2, delta);
-      child.position.y = MathUtils.damp(child.position.y, emphasis * 0.22, 4.2, delta);
-      child.material.opacity = MathUtils.damp(child.material.opacity, chapter.structure * 0.5 + emphasis * 0.28, 4.2, delta);
-      if (child.children.length > 0) {
-         child.children[0].material.opacity = MathUtils.damp(child.children[0].material.opacity, chapter.structure * 0.85 + emphasis * 0.42, 4.2, delta);
-      }
-    });
+          child.position.y = MathUtils.damp(child.position.y, emphasis * 0.22, 4.2, delta);
+          child.material.opacity = MathUtils.damp(child.material.opacity, chapter.structure * 0.5 + emphasis * 0.28, 4.2, delta);
+          if (child.children.length > 0) {
+            child.children[0].material.opacity = MathUtils.damp(child.children[0].material.opacity, chapter.structure * 0.85 + emphasis * 0.42, 4.2, delta);
+          }
+        });
   });
 
   return (
@@ -219,6 +227,7 @@ function StagePlane({ progressRef }) {
 
 function ParticleField({ pointer, reducedMotion, progressRef }) {
   const pointsRef = useRef();
+  const matRef = useRef();
   const positions = useMemo(() => {
     const buffer = new Float32Array(320 * 3);
     for (let i = 0; i < 320; i += 1) {
@@ -234,13 +243,45 @@ function ParticleField({ pointer, reducedMotion, progressRef }) {
     if (!pointsRef.current) return;
     const t = state.clock.getElapsedTime();
     const progress = progressRef.current;
+    const px = pointer.current.x;
+    const py = pointer.current.y;
+    const pointerMag = Math.sqrt(px * px + py * py);
+
+    // Pointer steers particle drift direction — light sculpting
     pointsRef.current.rotation.y = MathUtils.damp(
       pointsRef.current.rotation.y,
-      reducedMotion ? 0.06 : pointer.current.x * 0.16 + progress * 0.06,
-      3.2,
+      px * 0.22 + progress * 0.06,
+      2.8,
+      delta
+    );
+    pointsRef.current.rotation.x = MathUtils.damp(
+      pointsRef.current.rotation.x,
+      py * 0.1,
+      2.8,
       delta
     );
     pointsRef.current.position.y = Math.sin(t * 0.28) * 0.06;
+    pointsRef.current.position.x = MathUtils.damp(
+      pointsRef.current.position.x,
+      16,
+      2.8,
+      delta
+    );
+    // Particles glow brighter near cursor
+    if (matRef.current) {
+      matRef.current.opacity = MathUtils.damp(
+        matRef.current.opacity,
+        0.5 + pointerMag * 0.35,
+        4,
+        delta
+      );
+      matRef.current.size = MathUtils.damp(
+        matRef.current.size,
+        0.03 + pointerMag * 0.018,
+        4,
+        delta
+      );
+    }
   });
 
   return (
@@ -248,7 +289,7 @@ function ParticleField({ pointer, reducedMotion, progressRef }) {
       <bufferGeometry>
         <bufferAttribute attach="attributes-position" args={[positions, 3]} />
       </bufferGeometry>
-      <pointsMaterial color="#dfd7c2" size={0.03} sizeAttenuation transparent opacity={0.6} blending={AdditiveBlending} />
+      <pointsMaterial ref={matRef} color="#dfd7c2" size={0.03} sizeAttenuation transparent opacity={0.6} blending={AdditiveBlending} />
     </points>
   );
 }
@@ -303,6 +344,14 @@ function CSSBridge({ progressRef, beamWorldRef, beamStateRef }) {
   const { camera, size } = useThree();
   const projected = useRef(new Vector3());
   const smoothed = useRef({ x: 0.78, y: 0.22 });
+  const lastValuesRef = useRef({
+    beamX: "",
+    beamY: "",
+    beamAngle: "",
+    beamIntensity: "",
+    sceneProgress: "",
+    viewportAspect: ""
+  });
 
   useFrame(() => {
     projected.current.copy(beamWorldRef.current).project(camera);
@@ -317,21 +366,87 @@ function CSSBridge({ progressRef, beamWorldRef, beamStateRef }) {
     smoothed.current.y += (targetY - smoothed.current.y) * 0.14;
 
     const root = document.documentElement.style;
-    root.setProperty("--beam-x", smoothed.current.x.toFixed(4));
-    root.setProperty("--beam-y", smoothed.current.y.toFixed(4));
-    root.setProperty("--beam-angle", (beamStateRef.current.angle * (180 / Math.PI)).toFixed(3));
-    root.setProperty("--beam-intensity", beamStateRef.current.intensity.toFixed(3));
-    root.setProperty("--scene-progress", (progressRef.current / MAX_INDEX).toFixed(4));
-    root.setProperty("--viewport-aspect", (size.width / Math.max(size.height, 1)).toFixed(3));
+    const nextValues = {
+      beamX: smoothed.current.x.toFixed(4),
+      beamY: smoothed.current.y.toFixed(4),
+      beamAngle: (beamStateRef.current.angle * (180 / Math.PI)).toFixed(3),
+      beamIntensity: beamStateRef.current.intensity.toFixed(3),
+      sceneProgress: (progressRef.current / MAX_INDEX).toFixed(4),
+      viewportAspect: (size.width / Math.max(size.height, 1)).toFixed(3)
+    };
+
+    Object.entries(nextValues).forEach(([key, value]) => {
+      if (lastValuesRef.current[key] === value) return;
+      root.setProperty(`--${key.replace(/[A-Z]/g, (match) => `-${match.toLowerCase()}`)}`, value);
+      lastValuesRef.current[key] = value;
+    });
   });
 
   return null;
+}
+
+// Floating glow orb that follows pointer in 3D space — the cursor's "torch"
+function PointerGlow({ pointer, reducedMotion, progressRef }) {
+  const groupRef = useRef();
+  const matRef = useRef();
+  const lightRef = useRef();
+
+  useFrame((_, delta) => {
+    if (!groupRef.current) return;
+    const px = pointer.current.x;
+    const py = pointer.current.y;
+    const camX = MathUtils.lerp(CHAPTER_X[0], CHAPTER_X[MAX_INDEX], progressRef.current / MAX_INDEX);
+
+    // Map pointer to a position in front of the camera
+    const targetX = camX + px * 4.5;
+    const targetY = 0.5 + py * 2.2;
+    const targetZ = 3.2 + Math.abs(px) * 0.8;
+
+    // Move the ENTIRE group so both mesh + pointLight follow together
+    groupRef.current.position.x = MathUtils.damp(groupRef.current.position.x, targetX, 3.6, delta);
+    groupRef.current.position.y = MathUtils.damp(groupRef.current.position.y, targetY, 3.6, delta);
+    groupRef.current.position.z = MathUtils.damp(groupRef.current.position.z, targetZ, 3.6, delta);
+
+    const pointerMag = Math.sqrt(px * px + py * py);
+    if (matRef.current) {
+      matRef.current.opacity = MathUtils.damp(matRef.current.opacity, 0.18 + pointerMag * 0.45, 4.5, delta);
+    }
+    if (lightRef.current) {
+      lightRef.current.intensity = MathUtils.damp(lightRef.current.intensity, 0.3 + pointerMag * 0.8, 4.5, delta);
+    }
+  });
+
+  return (
+    <group ref={groupRef} position={[0, 0.5, 3.2]}>
+      <mesh>
+        <sphereGeometry args={[0.35, 16, 16]} />
+        <meshBasicMaterial
+          ref={matRef}
+          color="#f5ecd4"
+          transparent
+          opacity={0.18}
+          toneMapped={false}
+          blending={AdditiveBlending}
+          depthWrite={false}
+        />
+      </mesh>
+      <pointLight
+        ref={lightRef}
+        intensity={0.4}
+        color="#efe5d0"
+        distance={12}
+        decay={2}
+      />
+    </group>
+  );
 }
 
 function Scene({ pointer, reducedMotion, progressRef }) {
   const { scene, camera } = useThree();
   const beamWorldRef = useRef(new Vector3(0, 0.2, 0));
   const beamStateRef = useRef({ angle: 0, intensity: 0.8 });
+  const keyLightRef = useRef();
+  const fillLightRef = useRef();
 
   useEffect(() => {
     scene.background = new Color("#000000");
@@ -342,29 +457,67 @@ function Scene({ pointer, reducedMotion, progressRef }) {
     const normalized = progressRef.current / MAX_INDEX;
     const pathPoint = CAMERA_PATH.getPointAt(normalized);
     const targetPoint = TARGET_PATH.getPointAt(normalized);
+    const px = pointer.current.x;
+    const py = pointer.current.y;
+    const pointerMag = Math.sqrt(px * px + py * py);
 
-    const pointerWeight = reducedMotion ? 0 : Math.max(0.18, 0.52 - normalized * 0.18);
-    const cameraOffsetX = pointer.current.x * pointerWeight;
-    const cameraOffsetY = pointer.current.y * (pointerWeight * 0.42);
-    const cameraOffsetZ = -pointer.current.x * 0.06;
+    // Camera: FIXED path only — no pointer offset
+    camera.position.x = MathUtils.damp(camera.position.x, pathPoint.x, 3.2, delta);
+    camera.position.y = MathUtils.damp(camera.position.y, pathPoint.y, 3.2, delta);
+    camera.position.z = MathUtils.damp(camera.position.z, pathPoint.z, 3.2, delta);
+    camera.lookAt(targetPoint.x, targetPoint.y, targetPoint.z);
 
-    camera.position.x = MathUtils.damp(camera.position.x, pathPoint.x + cameraOffsetX, 3.6, delta);
-    camera.position.y = MathUtils.damp(camera.position.y, pathPoint.y + cameraOffsetY, 3.6, delta);
-    camera.position.z = MathUtils.damp(camera.position.z, pathPoint.z + cameraOffsetZ, 3.6, delta);
-    camera.lookAt(
-      targetPoint.x + pointer.current.x * pointerWeight * 0.2,
-      targetPoint.y + pointer.current.y * pointerWeight * 0.16,
-      targetPoint.z
-    );
+    // Pointer-driven lighting: key light follows cursor direction
+    if (keyLightRef.current) {
+      const camX = MathUtils.lerp(CHAPTER_X[0], CHAPTER_X[MAX_INDEX], normalized);
+      keyLightRef.current.position.x = MathUtils.damp(
+        keyLightRef.current.position.x,
+        camX + 2.8 + px * 3.5,
+        3.5,
+        delta
+      );
+      keyLightRef.current.position.y = MathUtils.damp(
+        keyLightRef.current.position.y,
+        1.5 + py * 1.8,
+        3.5,
+        delta
+      );
+      keyLightRef.current.intensity = MathUtils.damp(
+        keyLightRef.current.intensity,
+        0.42 + pointerMag * 0.35,
+        4,
+        delta
+      );
+    }
+
+    // Fill light reacts inversely
+    if (fillLightRef.current) {
+      fillLightRef.current.intensity = MathUtils.damp(
+        fillLightRef.current.intensity,
+        0.12 + (1 - pointerMag) * 0.06,
+        4,
+        delta
+      );
+    }
+
+    // Fog density subtly modulated by pointer proximity to center
+    if (scene.fog) {
+      scene.fog.density = MathUtils.damp(
+        scene.fog.density,
+        0.03 - pointerMag * 0.008,
+        3,
+        delta
+      );
+    }
   });
 
   return (
     <>
       <PerspectiveCamera makeDefault position={[0, 0.25, 6.8]} fov={34} />
-      <ambientLight intensity={0.28} />
-      <directionalLight position={[4, 5, 4]} intensity={0.28} color="#f0e4c9" />
-      <pointLight position={[2.8, 1.5, 1.6]} intensity={0.52} color="#e8dcc4" />
-      <pointLight position={[16, -1.4, -1.2]} intensity={0.12} color="#8d8573" />
+      <ambientLight intensity={0.22} />
+      <directionalLight position={[4, 5, 4]} intensity={0.22} color="#f0e4c9" />
+      <pointLight ref={keyLightRef} position={[2.8, 1.5, 1.6]} intensity={0.52} color="#e8dcc4" />
+      <pointLight ref={fillLightRef} position={[16, -1.4, -1.2]} intensity={0.12} color="#8d8573" />
       <StagePlane progressRef={progressRef} />
       <BeamSystem
         pointer={pointer}
@@ -376,6 +529,7 @@ function Scene({ pointer, reducedMotion, progressRef }) {
       <ChapterStructures progressRef={progressRef} />
       <AtmosphereRings progressRef={progressRef} />
       <ParticleField pointer={pointer} reducedMotion={reducedMotion} progressRef={progressRef} />
+      <PointerGlow pointer={pointer} reducedMotion={reducedMotion} progressRef={progressRef} />
       <FramingLines />
       <CSSBridge
         progressRef={progressRef}
@@ -388,7 +542,10 @@ function Scene({ pointer, reducedMotion, progressRef }) {
 
 export function HeroCanvas({ pointer, reducedMotion, progressRef }) {
   return (
-    <Canvas dpr={[1, 1.8]} gl={{ antialias: true, alpha: false }}>
+    <Canvas
+      dpr={[1, 1.6]}
+      gl={{ alpha: false, antialias: true, powerPreference: "high-performance", stencil: false }}
+    >
       <Scene pointer={pointer} reducedMotion={reducedMotion} progressRef={progressRef} />
     </Canvas>
   );

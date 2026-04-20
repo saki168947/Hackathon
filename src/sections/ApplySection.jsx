@@ -1,5 +1,6 @@
 import { useSectionReveal } from "../hooks/useSectionReveal";
 import { ApplyForm } from "../components/ApplyForm";
+import { APPLY_COPY, FOOTER_COPY } from "../content/siteContent";
 
 export function ApplySection({ onBackToTop, forceVisible = false }) {
   const { ref, visible } = useSectionReveal();
@@ -10,45 +11,56 @@ export function ApplySection({ onBackToTop, forceVisible = false }) {
       <div className="apply-wrap">
         <div className="apply-glow" aria-hidden="true" />
 
-        <div className="apply-panel">
-          <div className="apply-panel__left">
+        <div className="apply-finale">
+          <div className="apply-finale__intro">
             <span className="section-title__eyebrow">Apply</span>
-            <h2>带着想法来，<br />或者带着问题来。</h2>
-            <p>
-              如果你会写代码、做交互、做视觉、做硬件，或者只是对一个方向有强烈判断，
-              都可以报名。我们更看重你想做什么，以及你准备怎样把它做出来。
-            </p>
-            <ul className="apply-checklist">
-              <li><span>✓</span> 独立参赛或 2–4 人组队</li>
-              <li><span>✓</span> 作品须在活动期间完成</li>
-              <li><span>✓</span> 开源优先，但不强制</li>
-            </ul>
+            <h2 className="apply-finale__title">{APPLY_COPY.title}</h2>
+            <p className="apply-finale__body">{APPLY_COPY.body}</p>
           </div>
-          <div className="apply-panel__right">
-            <div className="apply-cta-card">
-              <p className="apply-cta-card__label">截止报名</p>
-              <p className="apply-cta-card__date">04.25</p>
-              <p className="apply-cta-card__seats">仅剩 <strong>20+</strong> 席位</p>
-              <ApplyForm />
-              <div style={{ marginTop: '16px' }}>
-                <a
-                  className="button button--ghost"
-                  href="#top"
-                  onClick={(event) => {
-                    event.preventDefault();
-                    onBackToTop();
-                  }}
-                >
-                  ← 回到顶部
-                </a>
-              </div>
+
+          <div className="apply-finale__stats" aria-label="Apply metadata">
+            <div className="apply-finale__stat">
+              <span>报名截止</span>
+              <strong>{APPLY_COPY.deadline}</strong>
             </div>
+            <div className="apply-finale__stat">
+              <span>参与名额</span>
+              <strong>{APPLY_COPY.seats}</strong>
+            </div>
+            <div className="apply-finale__stat">
+              <span>正式开始</span>
+              <strong>{APPLY_COPY.start}</strong>
+            </div>
+          </div>
+
+          <ul className="apply-checklist apply-finale__checklist">
+            {APPLY_COPY.checklist.map((item) => (
+              <li key={item}><span>✓</span> {item}</li>
+            ))}
+          </ul>
+
+          <div className="apply-finale__form">
+            <ApplyForm />
+          </div>
+
+          <div className="apply-finale__back">
+            <a
+              className="button button--ghost"
+              href="#top"
+              onClick={(event) => {
+                event.preventDefault();
+                onBackToTop();
+              }}
+            >
+              ← 回到顶部
+            </a>
           </div>
         </div>
 
         <footer className="site-footer">
-          <span>© 2026 Nodus Laboratory · WBU AI Hackathon</span>
-          <span>武汉 · 05.01 — 05.15</span>
+          {FOOTER_COPY.map((item) => (
+            <span key={item}>{item}</span>
+          ))}
         </footer>
       </div>
     </section>

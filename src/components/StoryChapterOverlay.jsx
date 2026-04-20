@@ -1,33 +1,14 @@
 import { ApplyForm } from "./ApplyForm";
-
-const manifestItems = [
-  ["01", "Prototype First", "让人看到一个像样的瞬间。"],
-  ["02", "Collaborate Fast", "设计、前端、AI、硬件，自然地接在一起。"],
-  ["03", "Show The Story", "交出来的不只是代码，还要有让人记住的「理由」。"]
-];
-
-const trackItems = [
-  ["01", "Agent In The Room", "让 Agent 真正进入老师、学生和现场。"],
-  ["02", "Space That Responds", "门、屏幕、装置、空间，都是「感觉」的延伸。"],
-  ["03", "AI × Music / Media", "做出能被听见、看见、感受到的东西。"],
-  ["04", "Open Proposal", "如果你有更锋利的想法，直接带题来。"]
-];
-
-const timelineItems = [
-  ["05.08", "报名开放"],
-  ["05.26", "线上说明会"],
-  ["06.14", "入选公布"],
-  ["05.01 — 05.15", "正式活动"]
-];
+import { APPLY_COPY, MANIFEST_ITEMS, TIMELINE_ITEMS, TRACK_ITEMS } from "../content/siteContent";
 
 function ManifestChapter() {
   return (
     <>
       <p className="chapter-overlay__copy">
-        技术只是其中一层。叙事、交互、现场表达。
+        做东西的过程比想象的乱。写着写着发现方向不对，聊着聊着才找到重点。但好像每次都是这样过来的。
       </p>
       <div className="chapter-stack">
-        {manifestItems.map(([id, title, text]) => (
+        {MANIFEST_ITEMS.map(({ id, title, text }) => (
           <article className="chapter-strip" key={id}>
             <span className="chapter-strip__index">{id}</span>
             <div className="chapter-strip__body">
@@ -45,10 +26,10 @@ function TracksChapter() {
   return (
     <>
       <p className="chapter-overlay__copy">
-        你可以从这里出发，也可以带着自己的方向来。
+        这几个方向是我们自己觉得值得试的。当然，你也可以完全不管这些。
       </p>
       <div className="chapter-dual-lane">
-        {trackItems.map(([id, title, text]) => (
+        {TRACK_ITEMS.map(({ id, title, text }) => (
           <article className="chapter-track" key={id}>
             <span className="chapter-track__id">{id}</span>
             <h3>{title}</h3>
@@ -64,7 +45,7 @@ function ScheduleChapter() {
   return (
     <>
       <div className="chapter-timeline">
-        {timelineItems.map(([date, title]) => (
+        {TIMELINE_ITEMS.map(({ date, title }) => (
           <article className="chapter-timeline__item" key={date}>
             <span>{date}</span>
             <h3>{title}</h3>
@@ -79,15 +60,16 @@ function ApplyChapter({ onGoToChapter }) {
   return (
     <>
       <p className="chapter-overlay__copy">
-        代码、交互、视觉、硬件，我们需要的是同样一群不安分的灵魂。
+        不用准备得很完美。想清楚大概要做什么，找好人，剩下的到了现场再说。
       </p>
       <ApplyForm />
       <div className="chapter-actionband">
         <button className="button button--ghost" type="button" onClick={() => onGoToChapter(0)}>返回起点</button>
       </div>
       <div className="chapter-kicker">
-        <span>截止 04.25</span>
-        <span>武汉商学院 · 05.01 — 05.15</span>
+        {APPLY_COPY.kicker.map((item) => (
+          <span key={item}>{item}</span>
+        ))}
       </div>
     </>
   );
@@ -109,11 +91,17 @@ function getChapterStyle(index, progress) {
   const blur = abs * 10;
   const pointerEvents = abs < 0.58 ? "auto" : "none";
   const light = Math.max(0, 1 - abs * 1.55);
+  const pointerShiftX = Math.max(12, 34 - abs * 14);
+  const pointerShiftY = Math.max(6, 18 - abs * 8);
+  const tiltY = (distance * -4.2).toFixed(3);
+  const tiltX = (distance * 1.2).toFixed(3);
 
   return {
     "--chapter-light": light.toFixed(4),
+    "--chapter-pointer-x": `${pointerShiftX.toFixed(2)}px`,
+    "--chapter-pointer-y": `${pointerShiftY.toFixed(2)}px`,
     opacity,
-    transform: `translate3d(${x}px, 0, ${z}px) scale(${scale})`,
+    transform: `translate3d(calc(${x}px + var(--pointer-x) * ${pointerShiftX.toFixed(2)}px), calc(var(--pointer-y) * ${(-pointerShiftY).toFixed(2)}px), ${z}px) scale(${scale}) rotateY(calc(${tiltY}deg + var(--pointer-x) * -5deg)) rotateX(calc(${tiltX}deg + var(--pointer-y) * 3deg))`,
     filter: `blur(${blur}px)`,
     pointerEvents
   };

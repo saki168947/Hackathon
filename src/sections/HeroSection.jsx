@@ -1,4 +1,5 @@
 import { lazy, Suspense } from "react";
+import { HERO_COPY, HERO_FACTS, HERO_META } from "../content/siteContent";
 
 const HeroCanvas = lazy(() =>
   import("../components/HeroCanvas").then((module) => ({ default: module.HeroCanvas }))
@@ -18,7 +19,6 @@ export function HeroSection({
       className="hero"
       id="top"
     >
-      {!showCanvas ? <div className="hero__beam-origin" aria-hidden="true" /> : null}
       <div className="hero__canvas" aria-hidden="true">
         {showCanvas ? (
           <Suspense fallback={<div className="hero__canvas-fallback" />}>
@@ -30,14 +30,13 @@ export function HeroSection({
       </div>
       <div className={`hero__content shell ${introDone && isActive ? "is-ready" : ""} ${isActive ? "is-current" : "is-dimmed"}`}>
         <div className="hero__meta hero__layer hero__layer--1">
-          <span>WBU AI · 2026</span>
-          <span>05.01 — 05.15</span>
-          <span>武汉</span>
+          {HERO_META.map((item) => (
+            <span key={item}>{item}</span>
+          ))}
         </div>
-        <h1 className="hero__layer hero__layer--2">一场把想法照亮的黑客松。</h1>
+        <h1 className="hero__layer hero__layer--2">{HERO_COPY.title}</h1>
         <p className="hero__lede hero__layer hero__layer--3">
-          黑底、一道光、持续展开的协作。我们不追求把概念堆成口号，
-          而是让原型、叙事与判断在同一个现场慢慢对焦。
+          {HERO_COPY.lede}
         </p>
         <div className="hero__actions hero__layer hero__layer--4">
           <a
@@ -48,7 +47,7 @@ export function HeroSection({
               onGoToPanel(4);
             }}
           >
-            立即报名
+            报名
           </a>
           <a
             className="button button--ghost"
@@ -62,21 +61,14 @@ export function HeroSection({
           </a>
         </div>
         <div className="hero__facts hero__layer hero__layer--5">
-          <div>
-            <strong>04.25</strong>
-            <span>报名截止</span>
-          </div>
-          <div>
-            <strong>05.01–05.15</strong>
-            <span>正式活动</span>
-          </div>
-          <div>
-            <strong>20+</strong>
-            <span>参与名额</span>
-          </div>
+          {HERO_FACTS.map((fact) => (
+            <div key={fact.label}>
+              <strong>{fact.value}</strong>
+              <span>{fact.label}</span>
+            </div>
+          ))}
         </div>
       </div>
-      {showCanvas ? <div className="hero__hint">Move near the light</div> : null}
     </section>
   );
 }

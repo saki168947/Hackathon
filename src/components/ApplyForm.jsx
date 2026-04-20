@@ -13,6 +13,7 @@ export function ApplyForm() {
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   function updateField(event) {
     const { name, value } = event.target;
@@ -46,50 +47,70 @@ export function ApplyForm() {
   }
 
   return (
-    <form className="apply-form" onSubmit={handleSubmit}>
-      <div className="apply-form__topbar">
-        <span className="apply-form__eyebrow">Application Form</span>
-        <p className="apply-form__hint">信息会自动发送到报名邮箱，并可选发回执确认。</p>
+    <div className="apply-form-shell">
+      {!isExpanded && (
+        <div className="apply-form-triggerband">
+          <p className="apply-form-triggerband__hint">准备好再填写。</p>
+          <button 
+            className="button button--primary apply-cta-card__btn" 
+            type="button" 
+            onClick={() => setIsExpanded(true)}
+          >
+            填写报名表
+          </button>
+        </div>
+      )}
+
+      <div className={`apply-form-drawer ${isExpanded ? "is-visible" : ""}`} aria-hidden={!isExpanded} hidden={!isExpanded}>
+        <div>
+          <form className="apply-form" onSubmit={handleSubmit}>
+            <div className="apply-form__topbar">
+              <span className="apply-form__eyebrow">报名表</span>
+              <button 
+                type="button" 
+                className="apply-form__close" 
+                onClick={() => setIsExpanded(false)}
+                aria-label="收起表单"
+              >
+                ×
+              </button>
+            </div>
+            <p className="apply-form__hint">
+              通过后会邮件通知。
+            </p>
+            <div className="apply-form__grid">
+              <label className="apply-form__field">
+                <span>姓名</span>
+                <input name="name" value={form.name} onChange={updateField} required />
+              </label>
+              <label className="apply-form__field">
+                <span>邮箱</span>
+                <input name="email" type="email" value={form.email} onChange={updateField} required />
+              </label>
+              <label className="apply-form__field">
+                <span>团队名称</span>
+                <input name="teamName" value={form.teamName} onChange={updateField} />
+              </label>
+              <label className="apply-form__field">
+                <span>你的角色</span>
+                <input name="role" value={form.role} onChange={updateField} />
+              </label>
+            </div>
+            <label className="apply-form__field apply-form__field--full">
+              <span>想法简述</span>
+              <textarea name="projectIdea" rows={5} value={form.projectIdea} onChange={updateField} required />
+            </label>
+            <div className="apply-form__actions">
+              <button className="button button--primary" type="submit" disabled={pending}>
+                {pending ? "发送中…" : "提交报名"}
+              </button>
+              <span className={`apply-form__message ${error ? "is-error" : "is-success"}`} role="status">
+                {message}
+              </span>
+            </div>
+          </form>
+        </div>
       </div>
-      <div className="apply-form__grid">
-        <label className="apply-form__field">
-          <span>姓名</span>
-          <input name="name" autoComplete="name" value={form.name} onChange={updateField} required />
-        </label>
-        <label className="apply-form__field">
-          <span>邮箱</span>
-          <input
-            name="email"
-            type="email"
-            autoComplete="email"
-            inputMode="email"
-            spellCheck={false}
-            value={form.email}
-            onChange={updateField}
-            required
-          />
-        </label>
-        <label className="apply-form__field">
-          <span>团队/项目名</span>
-          <input name="teamName" autoComplete="organization" value={form.teamName} onChange={updateField} />
-        </label>
-        <label className="apply-form__field">
-          <span>角色</span>
-          <input name="role" autoComplete="organization-title" value={form.role} onChange={updateField} />
-        </label>
-      </div>
-      <label className="apply-form__field apply-form__field--full">
-        <span>想法简介</span>
-        <textarea name="projectIdea" rows={6} value={form.projectIdea} onChange={updateField} required />
-      </label>
-      <div className="apply-form__actions">
-        <button className="button button--primary" type="submit" disabled={pending}>
-          {pending ? "发送中…" : "提交报名"}
-        </button>
-        <span className={`apply-form__message ${error ? "is-error" : "is-success"}`} role="status" aria-live="polite">
-          {message}
-        </span>
-      </div>
-    </form>
+    </div>
   );
 }
